@@ -48,33 +48,8 @@ bsuc-pos 0# ()
 bsuc-pos (bs 1#) ()
 
 open ≡-Reasoning
-
-{-
 open import Data.Digit
-open import Data.Nat.Properties
-
-open import Data.Sum
-no-zero-divisors : ∀ n m → n × m ≡ 0 → n ≡ 0 ⊎ m ≡ 0
-no-zero-divisors zero m p = inj₁ refl
-no-zero-divisors (ℕ.suc n) zero p = inj₂ refl
-no-zero-divisors (ℕ.suc n) (ℕ.suc n') ()
-
-fromDigits-snoc-eq0 : ∀ {b} ds d → fromDigits {ℕ.suc b} (ds ++ d ∷ []) ≡ 0 → d ≡ zero
-fromDigits-snoc-eq0 ds zero p = refl
-fromDigits-snoc-eq0 [] (Fin.suc i) ()
-fromDigits-snoc-eq0 {b} (x ∷ xs) (Fin.suc i) p with no-zero-divisors (fromDigits (xs ++ Fin.suc i ∷ [])) (ℕ.suc b) (i+j≡0⇒j≡0 (Data.Fin.toℕ x) p)
-fromDigits-snoc-eq0 (x ∷ xs) (Fin.suc i) p | inj₁ x' = fromDigits-snoc-eq0 xs (Fin.suc i) x'
-fromDigits-snoc-eq0 (x ∷ xs) (Fin.suc i) p | inj₂ ()
-
-toℕ-bsuc-pos : ∀ n → toℕ (bsuc n) ≡ 0 → ⊥
-toℕ-bsuc-pos n p with bsuc n | inspect bsuc n
-toℕ-bsuc-pos n p | 0# | Reveal_is_.[_] eq = bsuc-pos n eq
-toℕ-bsuc-pos n p | bs 1# | q with fromDigits-snoc-eq0  bs (Fin.suc zero) p
-toℕ-bsuc-pos n p | bs 1# | q | ()
--}
-
-open import Data.Digit
-open import Data.Nat.Properties
+open import Data.Nat.Properties using (module SemiringSolver)
 open SemiringSolver
 open import Function using (flip)
 
@@ -114,4 +89,4 @@ plus x (ℕ.suc z) p y | Suc {n = n} eq v = bsuc (plus n z p' y)
         ℕ.suc z
       ∎ )
 
--- define a view from Bin to Bin indexed by their toℕ size?      
+-- define a view from Bin to Bin indexed by their toℕ size?
