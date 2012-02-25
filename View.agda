@@ -1,7 +1,7 @@
 module View where
 
 open import Data.List
-open import Data.Fin hiding (_+_)
+open import Data.Fin hiding (_+_;toℕ)
 open import Data.Bin hiding (_+_)
 open import Relation.Binary.PropositionalEquality
 open import Data.Nat renaming (_*_ to _×_)
@@ -43,57 +43,75 @@ data ℕView : Bin → Set where
 ℕview 0# = Zero
 ℕview (bs 1#) = ℕview⁺ bs
 
-sizeof : Bin → ℕ
-sizeof 0# = 0
-sizeof ([] 1#) = 1
-sizeof ((zero ∷ xs) 1#) = 2 × (sizeof (xs 1#))
-sizeof ((Fin.suc i ∷ xs) 1#) = ℕ.suc (2 × (sizeof (xs 1#)))
+bsuc-pos : ∀ n → bsuc n ≡ 0# → ⊥
+bsuc-pos 0# ()
+bsuc-pos (bs 1#) ()
 
 open ≡-Reasoning
 
--- in Data.Nat.Properties but private!
-m+1+n≡1+m+n : ∀ m n → m + ℕ.suc n ≡ ℕ.suc (m + n)
-m+1+n≡1+m+n zero    n = refl
-m+1+n≡1+m+n (ℕ.suc m) n = cong ℕ.suc (m+1+n≡1+m+n m n)
+{-
+open import Data.Digit
+open import Data.Nat.Properties
 
+open import Data.Sum
+no-zero-divisors : ∀ n m → n × m ≡ 0 → n ≡ 0 ⊎ m ≡ 0
+no-zero-divisors zero m p = inj₁ refl
+no-zero-divisors (ℕ.suc n) zero p = inj₂ refl
+no-zero-divisors (ℕ.suc n) (ℕ.suc n') ()
 
-sizeof-bsuc⁺ : ∀ n → sizeof (bsuc⁺ n 1#) ≡ ℕ.suc (sizeof (n 1#))
-sizeof-bsuc⁺ [] = refl
-sizeof-bsuc⁺ (zero ∷ xs) = refl
-sizeof-bsuc⁺ (Fin.suc i ∷ xs) = begin
-  sizeof (bsuc⁺ xs 1#) + (sizeof (bsuc⁺ xs 1#) + 0)
-    ≡⟨ cong₂ _+_ (sizeof-bsuc⁺ xs) (cong₂ _+_ (sizeof-bsuc⁺ xs) refl) ⟩
-  ℕ.suc (sizeof (xs 1#)) + (ℕ.suc (sizeof (xs 1#)) + 0) ≡⟨ m+1+n≡1+m+n (ℕ.suc (sizeof (xs 1#))) (sizeof (xs 1#) + zero) ⟩
-  (ℕ.suc (ℕ.suc (sizeof (xs 1#)) + (sizeof (xs 1#) + 0)) ∎)
+fromDigits-snoc-eq0 : ∀ {b} ds d → fromDigits {ℕ.suc b} (ds ++ d ∷ []) ≡ 0 → d ≡ zero
+fromDigits-snoc-eq0 ds zero p = refl
+fromDigits-snoc-eq0 [] (Fin.suc i) ()
+fromDigits-snoc-eq0 {b} (x ∷ xs) (Fin.suc i) p with no-zero-divisors (fromDigits (xs ++ Fin.suc i ∷ [])) (ℕ.suc b) (i+j≡0⇒j≡0 (Data.Fin.toℕ x) p)
+fromDigits-snoc-eq0 (x ∷ xs) (Fin.suc i) p | inj₁ x' = fromDigits-snoc-eq0 xs (Fin.suc i) x'
+fromDigits-snoc-eq0 (x ∷ xs) (Fin.suc i) p | inj₂ ()
 
-sizeof-bsuc : ∀ n → sizeof (bsuc n) ≡ ℕ.suc (sizeof n)
-sizeof-bsuc 0# = refl
-sizeof-bsuc (x 1#) = sizeof-bsuc⁺ x
+toℕ-bsuc-pos : ∀ n → toℕ (bsuc n) ≡ 0 → ⊥
+toℕ-bsuc-pos n p with bsuc n | inspect bsuc n
+toℕ-bsuc-pos n p | 0# | Reveal_is_.[_] eq = bsuc-pos n eq
+toℕ-bsuc-pos n p | bs 1# | q with fromDigits-snoc-eq0  bs (Fin.suc zero) p
+toℕ-bsuc-pos n p | bs 1# | q | ()
+-}
 
-sizeof-suc-inj : ∀ n z → sizeof (bsuc n) ≡ ℕ.suc z → sizeof n ≡ z
-sizeof-suc-inj n z p with ℕview n
-sizeof-suc-inj .0# z p | Zero = cong Data.Nat.pred p
-sizeof-suc-inj n z p | Suc {n = a} y y' = cong Data.Nat.pred (trans (sym (sizeof-bsuc n)) p)
+open import Data.Digit
+open import Data.Nat.Properties
+open SemiringSolver
+open import Function using (flip)
 
-sizeof-suc-pos : ∀ n → sizeof (bsuc n) ≡ 0 → ⊥
-sizeof-suc-pos 0# ()
-sizeof-suc-pos (bs 1#) p with trans (sym p) (sizeof-bsuc⁺ bs)
-sizeof-suc-pos (bs 1#) p | ()
+fromDigits-bsuc⁺ : ∀ bs → fromDigits ((bsuc⁺ bs) ++ (Fin.suc zero ∷ [])) ≡ ℕ.suc (fromDigits (bs ++ (Fin.suc zero ∷ [])))
+fromDigits-bsuc⁺ [] = refl
+fromDigits-bsuc⁺ (zero ∷ xs) = refl
+fromDigits-bsuc⁺ (Fin.suc zero ∷ xs) = begin
+  let t = Fin.suc zero ∷ [] in
+  let l = fromDigits (bsuc⁺ xs ++ t) in
+  let r-1 = fromDigits (xs ++ t) in
+  let r = 1 + r-1 in
+  l × 2 ≡⟨ cong (flip _×_ 2) (fromDigits-bsuc⁺ xs) ⟩ 
+  r × 2 ≡⟨ solve 1 (λ r-1 → (con 1 :+ r-1) :* con 2 := con 1 :+ (con 1 :+ r-1 :* con 2)) refl r-1 ⟩
+  1 + (1 + (r-1 × 2))
+  ∎
+fromDigits-bsuc⁺ (Fin.suc (Fin.suc ()) ∷ _)
 
-plus : (x : Bin) → (n : ℕ) → (sizeof x ≡ n) → Bin → Bin
+toℕ-suc-inj : ∀ n z → toℕ (bsuc n) ≡ ℕ.suc z → toℕ n ≡ z
+toℕ-suc-inj 0# z p = cong Data.Nat.pred p
+toℕ-suc-inj (bs 1#) z p = cong Data.Nat.pred (trans (sym (fromDigits-bsuc⁺ bs)) p)
+
+toℕ-bsuc-pos : ∀ n → toℕ (bsuc n) ≡ 0 → ⊥
+toℕ-bsuc-pos 0# ()
+toℕ-bsuc-pos (bs 1#) p with trans (sym p) (fromDigits-bsuc⁺ bs)
+toℕ-bsuc-pos (bs 1#) p | ()
+
+plus : (x : Bin) → (n : ℕ) → (toℕ x ≡ n) → Bin → Bin
 plus x _ _ _ with ℕview x
 plus .0# _ _ y | Zero = y
-plus x ℕ.zero p _ | Suc {n = n} eq v = ⊥-elim (sizeof-suc-pos n p')
-  where
-    p' = begin
-           sizeof (bsuc n) ≡⟨ sym (cong sizeof eq) ⟩
-           sizeof x        ≡⟨ p ⟩
-           zero ∎
+plus .(bsuc n) zero p _ | Suc {.(bsuc n)} {n} refl v = ⊥-elim (toℕ-bsuc-pos n p)
 plus x (ℕ.suc z) p y | Suc {n = n} eq v = bsuc (plus n z p' y)
   where
-    p' = sizeof-suc-inj n z (
+    p' = toℕ-suc-inj n z (
       begin
-        sizeof (bsuc n) ≡⟨ cong sizeof (sym eq) ⟩
-        sizeof x        ≡⟨ p    ⟩
+        toℕ (bsuc n) ≡⟨ cong toℕ (sym eq) ⟩
+        toℕ x        ≡⟨ p    ⟩
         ℕ.suc z
       ∎ )
+
+-- define a view from Bin to Bin indexed by their toℕ size?      
